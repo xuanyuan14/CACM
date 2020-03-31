@@ -19,12 +19,11 @@ This codebase contains source-code of the Pytorch-based implementation of our WS
 - You should create files which map queries and documents into node identifiers, rename them as ```qid_nid.json```and  ```uid_nid.json``` , and put them under the ```./data/dict``` directory.
 - Sample session files are available under the ```./data``` directory. The format of sample session files is as follows:
 
-|
-|-- each line: [<query sequence>]<tab>[<previous interaction>]<tab>[<document info>]<tab><clicked>
-|-- query sequence: qids 
-|-- interaction sequence: uid, rank, vid, clicked
-|-- document info: uid, rank, vid
-|-- clicked: 0 or 1
+* each line: [<query sequence>]<tab>[<previous interaction>]<tab>[<document info>]<tab><clicked>
+* query sequence: qids 
+* interaction sequence: uid, rank, vid, clicked
+* document info: uid, rank, vid
+* clicked: 0 or 1
 
 
 ### Available Dataset
@@ -53,7 +52,7 @@ Note that due to the difference of the session size, the batch_size can only be 
 
 ### Citation
 
-If you find the resources in this repo useful, please cite our works.
+If you find the resources in this repo useful, please cite our work.
 
 ```
 @inproceedings{chen2020Context,

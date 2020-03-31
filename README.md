@@ -36,7 +36,7 @@ We are delighted to share the public session dataset we used to run our experime
 | Queries             | 35903 | 9373 | 11391 |
 | Avg Session Len     |    2.4099 |  2.4012  |   2.4986 |
 
-This dataset is now available at [here](http://www.thuir.cn/tiangong-st/).
+This dataset is now available at this [site](http://www.thuir.cn/tiangong-st/).
 
 
 ### Quick Start

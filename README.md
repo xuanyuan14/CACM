@@ -11,7 +11,6 @@ This codebase contains source-code of the Pytorch-based implementation of our WS
 * pytorch >= 1.0.1
 * [tensorboardX](https://pypi.python.org/pypi/tensorboardX)
 * [tqdm](https://pypi.org/project/tqdm/)
-* [prettytable](https://pypi.org/project/PrettyTable/)
 
 
 ### Data Preparation

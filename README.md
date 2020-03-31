@@ -2,10 +2,8 @@
 
 ### Introduction
 
-PyTorch code for our WSDM2020 paper.
+This codebase contains source-code of the Pytorch-based implementation of our WSDM2020 paper.
   - [WSDM 2020] [A Context-Aware Click Model for Web Search](https://dl.acm.org/doi/10.1145/3336191.3371819)
-
-This codebase contains source-code of the Pytorch-based implementation of CACM. 
 
 ### Requirements
 
@@ -20,6 +18,7 @@ This codebase contains source-code of the Pytorch-based implementation of CACM.
 - You should generate your embedding files through the [node2vec](https://github.com/snap-stanford/snap/tree/master/examples/node2vec) tool and put it under the ```./data/graph``` directory.
 - You should create files which map queries and documents into node identifiers, rename them as ```qid_nid.json```and  ```uid_nid.json``` , and put them under the ```./data/dict``` directory.
 - Sample session files are available under the ```./data``` directory. The format of sample session files is as follows:
+
 |
 |-- each line: [<query sequence>]<tab>[<previous interaction>]<tab>[<document info>]<tab><clicked>
 |-- query sequence: qids 

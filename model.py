@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 '''
 @ref: A Context-Aware Click Model for Web Search
-@author: Anonymous Author(s)
+@author: Jia Chen, Jiaxin Mao, Yiqun Liu, Min Zhang, Shaoping Ma
 @desc: Model training, testing, saving, and loading
 '''
 import os

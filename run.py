@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 '''
 @ref: A Context-Aware Click Model for Web Search
-@author: Anonymous Author(s)
+@author: Jia Chen, Jiaxin Mao, Yiqun Liu, Min Zhang, Shaoping Ma
 @desc: Configurations and startups
 '''
 import os
@@ -11,7 +11,7 @@ import logging
 import time
 from dataset import Dataset
 from model import Model
-
+from utils import *
 
 def parse_args():
     parser = argparse.ArgumentParser('CACM')
@@ -68,23 +68,25 @@ def parse_args():
 
     path_settings = parser.add_argument_group('path settings')
     path_settings.add_argument('--train_dirs', nargs='+',
-                               default=['../../data/train_sess.txt'],
+                               default=['data/CACM/train_per_session.txt'],
                                help='list of dirs that contain the preprocessed train data')
     path_settings.add_argument('--dev_dirs', nargs='+',
-                               default=['../../data/test_sess.txt'],
+                               default=['data/CACM/dev_per_session.txt'],
                                help='list of dirs that contain the preprocessed dev data')
     path_settings.add_argument('--test_dirs', nargs='+',
-                               default=['../../data/test_sess.txt'],
+                               default=['data/CACM/test_per_session.txt'],
                                help='list of dirs that contain the preprocessed test data')
     path_settings.add_argument('--knowledge_type', default='simple',
                                help='type of knowledge embedding')
-    path_settings.add_argument('--model_dir', default='../data/models/',
+    path_settings.add_argument('--data_dir', default='outputs/CACM/',
+                               help='the main dir')
+    path_settings.add_argument('--model_dir', default='outputs/CACM/models/',
                                help='the dir to store models')
-    path_settings.add_argument('--result_dir', default='../data/results/',
+    path_settings.add_argument('--result_dir', default='outputs/CACM/results/',
                                help='the dir to output the results')
-    path_settings.add_argument('--summary_dir', default='../data/summary/',
+    path_settings.add_argument('--summary_dir', default='outputs/CACM/summary/',
                                help='the dir to write tensorboard summary')
-    path_settings.add_argument('--log_path',
+    path_settings.add_argument('--log_dir', default='outputs/CACM/log/',
                                help='path of the log file. If not set, logs are printed to console')
 
     path_settings.add_argument('--eval_freq', type=int, default=2000,
@@ -112,7 +114,7 @@ def rank(args):
         assert os.path.exists(data_path), '{} file does not exist.'.format(data_path)
     dataset = Dataset(args, test_dirs=args.test_dirs, isRank=True)
     logger.info('Initialize the model...')
-    model = Model(args, len(dataset.qid_query), len(dataset.uid_url),  len(dataset.vid_vtype))
+    model = Model(args, len(dataset.qid_nid), len(dataset.uid_nid),  len(dataset.vtype_vid))
     logger.info('model.global_step: {}'.format(model.global_step))
     assert args.load_model > -1
     logger.info('Restoring the model...')
@@ -131,7 +133,7 @@ def train(args):
         assert os.path.exists(data_path), '{} file does not exist.'.format(data_path)
     dataset = Dataset(args, train_dirs=args.train_dirs, dev_dirs=args.dev_dirs)
     logger.info('Initialize the model...')
-    model = Model(args, len(dataset.qid_query), len(dataset.uid_url),  len(dataset.vid_vtype))
+    model = Model(args, len(dataset.qid_nid), len(dataset.uid_nid), len(dataset.vtype_vid))
     logger.info('model.global_step: {}'.format(model.global_step))
     if args.load_model > -1:
         logger.info('Restoring the model...')
@@ -147,9 +149,13 @@ def run():
     assert args.hidden_size % 2 == 0
     logger = logging.getLogger("CACM")
     logger.setLevel(logging.INFO)
-    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-    if args.log_path:
-        file_handler = logging.FileHandler(args.log_path)
+    formatter = logging.Formatter('%(asctime)s - %(message)s')
+    check_path(args.model_dir)
+    check_path(args.result_dir)
+    check_path(args.summary_dir)
+    if args.log_dir:
+        check_path(args.log_dir)
+        file_handler = logging.FileHandler(os.path.join(args.log_dir, time.strftime('%Y-%m-%d-%H:%M:%S',time.localtime(time.time())) + '.txt'))
         file_handler.setLevel(logging.INFO)
         file_handler.setFormatter(formatter)
         logger.addHandler(file_handler)
@@ -160,9 +166,6 @@ def run():
         logger.addHandler(console_handler)
 
     logger.info('Running with args : {}'.format(args))
-
-    os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
-    os.environ["CUDA_VISIBLE_DEVICES"] = args.gpu
 
     logger.info('Checking the directories...')
     for dir_path in [args.model_dir, args.result_dir, args.summary_dir]:

@@ -2,13 +2,14 @@
 # -*- coding: utf-8 -*-
 '''
 @ref: A Context-Aware Click Model for Web Search
-@author: Anonymous Author(s)
+@author: Jia Chen, Jiaxin Mao, Yiqun Liu, Min Zhang, Shaoping Ma
 @desc: Loading the dataset
 '''
+import os
 import json
 import logging
 import numpy as np
-
+from utils import *
 
 class Dataset(object):
     def __init__(self, args, train_dirs=[], dev_dirs=[], test_dirs=[], isRank=False):
@@ -21,20 +22,13 @@ class Dataset(object):
         self.num_test_files = args.num_test_files
         self.embed_size = args.embed_size
 
-        with open('./data/dict/qid_query.json') as f1:
-            self.qid_query = json.load(f1)
-        with open('./data/dict/uid_url.json') as f2:
-            self.uid_url = json.load(f2)
-        with open('./data/dict/vid_vtype.json') as f3:
-            self.vid_vtype = json.load(f3)
-
         # load the pre-trained embeddings if use knowledge
         self.node_emb = {}
         self.qid_nid = {}
         self.uid_nid = {}
         if args.use_knowledge:
             knowledge_type = args.knowledge_type
-            knowledge_dir = './data/graph/%s/edge_%s.emb' % (knowledge_type, self.embed_size)
+            knowledge_dir = os.path.join(args.data_dir, 'TianGong-ST_{}.emb'.format(args.embed_size))
             with open(knowledge_dir, 'r') as fp:
                 fc = True
                 for line in fp:
@@ -48,10 +42,9 @@ class Dataset(object):
                         self.node_emb[int(data[0])] = [float(x) for x in data[1:]]
 
             # load qid_nid, uid_nid
-            with open('./data/dict/qid_nid.json') as f4:
-                self.qid_nid = json.load(f4)
-            with open('./data/dict/uid_nid.json') as f5:
-                self.uid_nid = json.load(f5)
+            self.vtype_vid = load_dict(args.data_dir, 'vtype_vid.dict')
+            self.qid_nid = load_dict(args.data_dir, 'qid_nid.dict')
+            self.uid_nid = load_dict(args.data_dir, 'uid_nid.dict')
 
         self.train_set, self.dev_set, self.test_set = [], [], []
         if isRank:

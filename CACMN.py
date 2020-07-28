@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 '''
 @ref: A Context-Aware Click Model for Web Search
-@author: Anonymous Author(s)
+@author: Jia Chen, Jiaxin Mao, Yiqun Liu, Min Zhang, Shaoping Ma
 @desc: The implementation of CACM
 '''
 import logging
@@ -117,7 +117,7 @@ class CACMN(nn.Module):
         for batch_idx, batch_knowledge in enumerate(knowledge_input_variable):
             batch_knowledge_output = []
             for sess_pos_idx, knowledge in enumerate(batch_knowledge):
-                query_idx = sess_pos_idx / 10 + 1
+                query_idx = sess_pos_idx // 10 + 1
                 knowledge_hidden = self.knowledge_encoder.initHidden()
                 this_knowledge = knowledge[: query_idx]
                 knowledge_output, knowledge_hidden = self.knowledge_encoder.forward(this_knowledge, knowledge_hidden,
@@ -185,7 +185,7 @@ class CACMN(nn.Module):
         examination_list_output = []
         for batch_idx, batch_examination in enumerate(examination_input_variable):
             batch_examination_output = []
-            query_num = batch_examination.size()[0] / 10
+            query_num = batch_examination.size()[0] // 10
             for query_idx in range(query_num):
                 this_query_context = batch_examination[query_idx * 10: (query_idx + 1) * 10]
                 this_query_context = this_query_context.view(1, 10, -1)

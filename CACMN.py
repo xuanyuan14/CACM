@@ -100,7 +100,7 @@ class CACMN(nn.Module):
             clicks = self.sigmoid(torch.add(torch.mul(out1, self.w31), torch.mul(out2, self.w32)))
         elif combine == 'sigmoid_log':
             clicks = 4 * torch.div(torch.mul(relevances, exams),
-                                   torch.mul(torch.add(relevances, 1), torch.add(exams, 1)))
+                                    torch.mul(torch.add(relevances, 1), torch.add(exams, 1)))
 
         return clicks
 
@@ -191,8 +191,8 @@ class CACMN(nn.Module):
                 this_query_context = this_query_context.view(1, 10, -1)
                 this_hidden = self.examination_predictor.initHidden()
                 this_examination_output = self.examination_predictor.forward(this_query_context[:, :, 2],
-                                                                             this_query_context[:, :, 3],
-                                                                             this_query_context[:, :, 1], this_hidden)
+                                                                            this_query_context[:, :, 3],
+                                                                            this_query_context[:, :, 1], this_hidden)
                 batch_examination_output.append(this_examination_output)
             batch_examination_output = torch.cat(tuple(batch_examination_output), 1)
             examination_list_output.append(batch_examination_output)

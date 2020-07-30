@@ -1,0 +1,9 @@
+__pycache__
+data
+outputs
+LR1e-2
+LR1e-3
+
+*.sh
+*.err
+*.out

@@ -250,17 +250,10 @@ class Model(object):
                 for idx, relevance in enumerate(relevances):
                     pred_rels[idx] = relevance
                 
-                #print('{}: \n{}'.format('relevances', relevances))
-                #print('{}: \n{}'.format('true_relevances', true_relevances))
-                #print('{}: \n{}'.format('pred_rels', pred_rels))
                 for k in trunc_levels:
-                    #print('\n{}: {}'.format('trunc_level', k))
                     ideal_ranking_relevances = sorted(true_relevances, reverse=True)[:k]
                     ranking = sorted([idx for idx in pred_rels], key = lambda idx : pred_rels[idx], reverse=True)
                     ranking_relevances = [true_relevances[idx] for idx in ranking[:k]]
-                    #print('{}: {}'.format('ideal_ranking_relevances', ideal_ranking_relevances))
-                    #print('{}: {}'.format('ranking', ranking))
-                    #print('{}: {}'.format('ranking_relevances', ranking_relevances))
                     dcg = self.dcg(ranking_relevances)
                     idcg = self.dcg(ideal_ranking_relevances)
                     if dcg > idcg:
@@ -281,14 +274,6 @@ class Model(object):
                         cnt_version2[k] += 1
                         ndcg_version1[k] += ndcg
                         ndcg_version2[k] += ndcg
-                    #print('{}: {}'.format('dcg', dcg))
-                    #print('{}: {}'.format('idcg', idcg))
-                    #print('{}: {}'.format('ndcg', ndcg))
-            '''for k in trunc_levels:
-                print()
-                print('{}: {}'.format('cnt_version1[{}]'.format(k), cnt_version1[k]))
-                print('{}: {}'.format('useless_session[{}]'.format(k), useless_session[k]))
-                print('{}: {}'.format('cnt_version2[{}]'.format(k), cnt_version2[k]))'''
             for k in trunc_levels:
                 ndcg_version1[k] /= cnt_version1[k]
                 ndcg_version2[k] /= cnt_version2[k]

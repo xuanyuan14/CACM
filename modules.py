@@ -210,7 +210,7 @@ class ExamPredictor(nn.Module):
         self.action_embedding = nn.Embedding(2, 4)
 
         self.gru = nn.GRU(16, self.hidden_size,
-                          batch_first=True, dropout=self.dropout_rate, num_layers=self.encode_gru_num_layer)
+                            batch_first=True, dropout=self.dropout_rate, num_layers=self.encode_gru_num_layer)
 
         self.output_linear = nn.Linear(self.hidden_size, 1)
         self.sigmoid = nn.Sigmoid()

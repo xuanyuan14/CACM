@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 '''
 @ref: A Context-Aware Click Model for Web Search
-@author: Anonymous Author(s)
+@author: Jia Chen, Jiaxin Mao, Yiqun Liu, Min Zhang, Shaoping Ma
 @desc: Configurations and startups
 '''
 import os
@@ -11,14 +11,14 @@ import logging
 import time
 from dataset import Dataset
 from model import Model
-
+from utils import *
 
 def parse_args():
     parser = argparse.ArgumentParser('CACM')
     parser.add_argument('--train', action='store_true',
                         help='train the model')
-    parser.add_argument('--rank', action='store_true',
-                        help='rank on test set')
+    parser.add_argument('--test', action='store_true',
+                        help='test on test set')
     parser.add_argument('--gpu', type=str, default='',
                         help='specify gpu device')
 
@@ -43,6 +43,8 @@ def parse_args():
                                 help='number of dev files')
     train_settings.add_argument('--num_test_files', type=int, default=1,
                                 help='number of test files')
+    train_settings.add_argument('--num_label_files', type=int, default=1,
+                                help='number of label files')
     train_settings.add_argument('--reg_relevance', type=float, default=1.0,
                                 help='regularization for relevance training')
 
@@ -68,70 +70,84 @@ def parse_args():
 
     path_settings = parser.add_argument_group('path settings')
     path_settings.add_argument('--train_dirs', nargs='+',
-                               default=['../../data/train_sess.txt'],
-                               help='list of dirs that contain the preprocessed train data')
+                                default=['data/CACM/train_per_session.txt'],
+                                help='list of dirs that contain the preprocessed train data')
     path_settings.add_argument('--dev_dirs', nargs='+',
-                               default=['../../data/test_sess.txt'],
-                               help='list of dirs that contain the preprocessed dev data')
+                                default=['data/CACM/dev_per_session.txt'],
+                                help='list of dirs that contain the preprocessed dev data')
     path_settings.add_argument('--test_dirs', nargs='+',
-                               default=['../../data/test_sess.txt'],
-                               help='list of dirs that contain the preprocessed test data')
+                                default=['data/CACM/test_per_session.txt'],
+                                help='list of dirs that contain the preprocessed test data')
+    path_settings.add_argument('--label_dirs', nargs='+',
+                                default=['data/CACM/human_label_for_CACM.txt'],
+                                help='list of dirs that contain the preprocessed label data')
     path_settings.add_argument('--knowledge_type', default='simple',
-                               help='type of knowledge embedding')
-    path_settings.add_argument('--model_dir', default='../data/models/',
-                               help='the dir to store models')
-    path_settings.add_argument('--result_dir', default='../data/results/',
-                               help='the dir to output the results')
-    path_settings.add_argument('--summary_dir', default='../data/summary/',
-                               help='the dir to write tensorboard summary')
-    path_settings.add_argument('--log_path',
-                               help='path of the log file. If not set, logs are printed to console')
+                                help='type of knowledge embedding')
+    path_settings.add_argument('--data_dir', default='outputs/CACM/',
+                                help='the main dir')
+    path_settings.add_argument('--model_dir', default='outputs/CACM/models/',
+                                help='the dir to store models')
+    path_settings.add_argument('--result_dir', default='outputs/CACM/results/',
+                                help='the dir to output the results')
+    path_settings.add_argument('--summary_dir', default='outputs/CACM/summary/',
+                                help='the dir to write tensorboard summary')
+    path_settings.add_argument('--log_dir', default='outputs/CACM/log/',
+                                help='path of the log file. If not set, logs are printed to console')
 
     path_settings.add_argument('--eval_freq', type=int, default=2000,
-                               help='the frequency of evaluating on the dev set when training')
+                                help='the frequency of evaluating on the dev set when training')
     path_settings.add_argument('--check_point', type=int, default=2000,
-                               help='the frequency of saving model')
+                                help='the frequency of saving model')
     path_settings.add_argument('--patience', type=int, default=3,
-                               help='lr half when more than the patience times of evaluation\' loss don\'t decrease')
+                                help='lr half when more than the patience times of evaluation\' loss don\'t decrease')
     path_settings.add_argument('--lr_decay', type=float, default=0.5,
-                               help='lr decay')
+                                help='lr decay')
     path_settings.add_argument('--load_model', type=int, default=-1,
-                               help='load model global step')
+                                help='load model global step')
     path_settings.add_argument('--data_parallel', type=bool, default=False,
-                               help='data_parallel')
+                                help='data_parallel')
     path_settings.add_argument('--gpu_num', type=int, default=1,
-                               help='gpu_num')
+                                help='gpu_num')
 
     return parser.parse_args()
 
-
-def rank(args):
+def test(args):
     logger = logging.getLogger("CACM")
     logger.info('Checking the data files...')
-    for data_path in args.test_dirs:
+    for data_path in args.train_dirs + args.dev_dirs + args.test_dirs + args.label_dirs:
         assert os.path.exists(data_path), '{} file does not exist.'.format(data_path)
-    dataset = Dataset(args, test_dirs=args.test_dirs, isRank=True)
+    dataset = Dataset(args, train_dirs=args.train_dirs, dev_dirs=args.dev_dirs, test_dirs=args.test_dirs, label_dirs=args.label_dirs)
     logger.info('Initialize the model...')
-    model = Model(args, len(dataset.qid_query), len(dataset.uid_url),  len(dataset.vid_vtype))
+    model = Model(args, len(dataset.qid_nid), len(dataset.uid_nid), len(dataset.vtype_vid))
     logger.info('model.global_step: {}'.format(model.global_step))
     assert args.load_model > -1
     logger.info('Restoring the model...')
     model.load_model(model_dir=args.model_dir, model_prefix=args.algo, global_step=args.load_model)
-    logger.info('Training the model...')
-    dev_batches = dataset.gen_mini_batches('test', args.batch_size, shuffle=False)
-    model.evaluate(dev_batches, dataset, result_dir=args.result_dir,
-                   result_prefix='rank.predicted.{}.{}.{}'.format(args.algo, args.load_model, time.time()))
-    logger.info('Done with model ranking!')
-
+    logger.info('Start computing LL & PPL for click prediction...')
+    test_batches = dataset.gen_mini_batches('test', args.batch_size, shuffle=False)
+    test_loss, test_LL, test_perplexity, test_perplexity_at_rank = model.evaluate(test_batches, dataset, result_dir=args.result_dir,
+                                                                                    result_prefix='test.predicted.{}.{}'.format(args.algo, model.global_step))
+    logger.info('Loss: {}'.format(test_loss))
+    logger.info('log likelihood: {}'.format(test_LL))
+    logger.info('perplexity: {}'.format(test_perplexity))
+    logger.info('Start computing NDCG@k for ranking performance')
+    label_batches = dataset.gen_mini_batches('label', args.batch_size, shuffle=False)
+    trunc_levels = [1, 3, 5, 10]
+    ndcgs_version1, ndcgs_version2 = model.ndcg(label_batches, dataset, result_dir=args.result_dir,
+                                                result_prefix='test.rank.{}.{}'.format(args.algo, model.global_step))
+    for trunc_level in trunc_levels:
+        ndcg_version1, ndcg_version2 = ndcgs_version1[trunc_level], ndcgs_version2[trunc_level]
+        logger.info("NDCG@{}: {}, {}".format(trunc_level, ndcg_version1, ndcg_version2))
+    logger.info('Done with model testing!')
 
 def train(args):
     logger = logging.getLogger("CACM")
     logger.info('Checking the data files...')
-    for data_path in args.train_dirs + args.dev_dirs:
+    for data_path in args.train_dirs + args.dev_dirs + args.test_dirs + args.label_dirs:
         assert os.path.exists(data_path), '{} file does not exist.'.format(data_path)
-    dataset = Dataset(args, train_dirs=args.train_dirs, dev_dirs=args.dev_dirs)
+    dataset = Dataset(args, train_dirs=args.train_dirs, dev_dirs=args.dev_dirs, test_dirs=args.test_dirs, label_dirs=args.label_dirs)
     logger.info('Initialize the model...')
-    model = Model(args, len(dataset.qid_query), len(dataset.uid_url),  len(dataset.vid_vtype))
+    model = Model(args, len(dataset.qid_nid), len(dataset.uid_nid), len(dataset.vtype_vid))
     logger.info('model.global_step: {}'.format(model.global_step))
     if args.load_model > -1:
         logger.info('Restoring the model...')
@@ -140,16 +156,19 @@ def train(args):
     model.train(dataset)
     logger.info('Done with model training!')
 
-
 def run():
     args = parse_args()
     assert args.batch_size % args.gpu_num == 0
     assert args.hidden_size % 2 == 0
     logger = logging.getLogger("CACM")
     logger.setLevel(logging.INFO)
-    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-    if args.log_path:
-        file_handler = logging.FileHandler(args.log_path)
+    formatter = logging.Formatter('%(asctime)s - %(message)s')
+    check_path(args.model_dir)
+    check_path(args.result_dir)
+    check_path(args.summary_dir)
+    if args.log_dir:
+        check_path(args.log_dir)
+        file_handler = logging.FileHandler(os.path.join(args.log_dir, time.strftime('%Y-%m-%d-%H:%M:%S',time.localtime(time.time())) + '.txt'))
         file_handler.setLevel(logging.INFO)
         file_handler.setFormatter(formatter)
         logger.addHandler(file_handler)
@@ -161,15 +180,14 @@ def run():
 
     logger.info('Running with args : {}'.format(args))
 
-    os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
-    os.environ["CUDA_VISIBLE_DEVICES"] = args.gpu
-
     logger.info('Checking the directories...')
     for dir_path in [args.model_dir, args.result_dir, args.summary_dir]:
         if not os.path.exists(dir_path):
             os.makedirs(dir_path)
     if args.train:
         train(args)
+    if args.test:
+        test(args)
     if args.rank:
         rank(args)
     logger.info('run done.')

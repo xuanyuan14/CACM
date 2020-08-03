@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 '''
 @ref: A Context-Aware Click Model for Web Search
-@author: Anonymous Author(s)
+@author: Jia Chen, Jiaxin Mao, Yiqun Liu, Min Zhang, Shaoping Ma
 @desc: The implementation of each module in CACM
 '''
 import torch
@@ -182,8 +182,8 @@ class RelevanceEstimator(nn.Module):
         self.hidden_size = hidden_size
         self.input_size = input_size
 
-        self.out1 = nn.Linear(input_size, hidden_size / 2)
-        self.out2 = nn.Linear(hidden_size / 2, 1)
+        self.out1 = nn.Linear(input_size, hidden_size // 2)
+        self.out2 = nn.Linear(hidden_size // 2, 1)
         self.sigmoid = nn.Sigmoid()
         self.tanh = nn.Tanh()
 
@@ -210,7 +210,7 @@ class ExamPredictor(nn.Module):
         self.action_embedding = nn.Embedding(2, 4)
 
         self.gru = nn.GRU(16, self.hidden_size,
-                          batch_first=True, dropout=self.dropout_rate, num_layers=self.encode_gru_num_layer)
+                            batch_first=True, dropout=self.dropout_rate, num_layers=self.encode_gru_num_layer)
 
         self.output_linear = nn.Linear(self.hidden_size, 1)
         self.sigmoid = nn.Sigmoid()

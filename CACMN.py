@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 '''
 @ref: A Context-Aware Click Model for Web Search
-@author: Anonymous Author(s)
+@author: Jia Chen, Jiaxin Mao, Yiqun Liu, Min Zhang, Shaoping Ma
 @desc: The implementation of CACM
 '''
 import logging
@@ -100,7 +100,7 @@ class CACMN(nn.Module):
             clicks = self.sigmoid(torch.add(torch.mul(out1, self.w31), torch.mul(out2, self.w32)))
         elif combine == 'sigmoid_log':
             clicks = 4 * torch.div(torch.mul(relevances, exams),
-                                   torch.mul(torch.add(relevances, 1), torch.add(exams, 1)))
+                                    torch.mul(torch.add(relevances, 1), torch.add(exams, 1)))
 
         return clicks
 
@@ -117,7 +117,7 @@ class CACMN(nn.Module):
         for batch_idx, batch_knowledge in enumerate(knowledge_input_variable):
             batch_knowledge_output = []
             for sess_pos_idx, knowledge in enumerate(batch_knowledge):
-                query_idx = sess_pos_idx / 10 + 1
+                query_idx = sess_pos_idx // 10 + 1
                 knowledge_hidden = self.knowledge_encoder.initHidden()
                 this_knowledge = knowledge[: query_idx]
                 knowledge_output, knowledge_hidden = self.knowledge_encoder.forward(this_knowledge, knowledge_hidden,
@@ -185,14 +185,14 @@ class CACMN(nn.Module):
         examination_list_output = []
         for batch_idx, batch_examination in enumerate(examination_input_variable):
             batch_examination_output = []
-            query_num = batch_examination.size()[0] / 10
+            query_num = batch_examination.size()[0] // 10
             for query_idx in range(query_num):
                 this_query_context = batch_examination[query_idx * 10: (query_idx + 1) * 10]
                 this_query_context = this_query_context.view(1, 10, -1)
                 this_hidden = self.examination_predictor.initHidden()
                 this_examination_output = self.examination_predictor.forward(this_query_context[:, :, 2],
-                                                                             this_query_context[:, :, 3],
-                                                                             this_query_context[:, :, 1], this_hidden)
+                                                                            this_query_context[:, :, 3],
+                                                                            this_query_context[:, :, 1], this_hidden)
                 batch_examination_output.append(this_examination_output)
             batch_examination_output = torch.cat(tuple(batch_examination_output), 1)
             examination_list_output.append(batch_examination_output)

@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 '''
 @ref: A Context-Aware Click Model for Web Search
-@author: Anonymous Author(s)
+@author: Jia Chen, Jiaxin Mao, Yiqun Liu, Min Zhang, Shaoping Ma
 @desc: Model training, testing, saving, and loading
 '''
 import os
@@ -14,11 +14,11 @@ from tqdm import tqdm
 from tensorboardX import SummaryWriter
 from torch import nn
 from CACMN import CACMN
+import math
 
 use_cuda = torch.cuda.is_available()
 
 MINF = 1e-30
-
 
 class Model(object):
     def __init__(self, args, query_size, doc_size, vtype_size):
@@ -48,11 +48,11 @@ class Model(object):
         self.criterion = nn.MSELoss()
 
     def compute_loss_rel(self, pred_rels, target_rels):  # compute loss for relevance
-        total_loss = 0.
+        total_loss = 0.0
         loss_list = []
         cnt = 0
         for batch_idx, rels in enumerate(target_rels):
-            loss = 0.
+            loss = 0.0
             cnt += 1
             last_click_pos = -1
             for position_idx, rel in enumerate(rels):
@@ -62,31 +62,44 @@ class Model(object):
                 if position_idx > last_click_pos:
                     break
                 if rel == 0:
-                    loss -= torch.log(1. - pred_rels[batch_idx][position_idx].view(1) + 1e-30)
+                    loss -= torch.log(1. - pred_rels[batch_idx][position_idx].view(1) + MINF)
                 else:
-                    loss -= torch.log(pred_rels[batch_idx][position_idx].view(1) + 1e-30)
-            if loss != 0.:
+                    loss -= torch.log(pred_rels[batch_idx][position_idx].view(1) + MINF)
+            if loss != 0.0:
                 loss_list.append(loss.data[0])
             total_loss += loss
         total_loss /= cnt
         return total_loss, loss_list
 
     def compute_loss(self, pred_scores, target_scores):  # compute loss for clicks
-        total_loss = 0.
+        total_loss = 0.0
         loss_list = []
         cnt = 0
         for batch_idx, scores in enumerate(target_scores):
-            loss = 0.
+            loss = 0.0
             cnt += 1
             for position_idx, score in enumerate(scores):  #
                 if score == 0:
-                    loss -= torch.log(1. - pred_scores[batch_idx][position_idx].view(1) + 1e-30)
+                    loss -= torch.log(1. - pred_scores[batch_idx][position_idx].view(1) + MINF)
                 else:
-                    loss -= torch.log(pred_scores[batch_idx][position_idx].view(1) + 1e-30)
+                    loss -= torch.log(pred_scores[batch_idx][position_idx].view(1) + MINF)
             loss_list.append(loss.data[0])
             total_loss += loss
         total_loss /= cnt
         return total_loss, loss_list
+
+    def compute_perplexity(self, pred_scores, target_scores):
+        '''
+        Compute the perplexity
+        '''
+        perplexity_at_rank = [0.0] * 10 # 10 docs per query
+        total_num = len(pred_scores[0]) // 10
+        for position_idx, score in enumerate(target_scores[0]):
+            if score == 0:
+                perplexity_at_rank[position_idx % 10] += torch.log2(1. - pred_scores[0][position_idx % 10].view(1) + MINF)
+            else:
+                perplexity_at_rank[position_idx % 10] += torch.log2(pred_scores[0][position_idx % 10].view(1) + MINF)
+        return total_num, perplexity_at_rank
 
     def create_train_op(self):
         if self.optim_type == 'adagrad':
@@ -114,7 +127,7 @@ class Model(object):
         num_steps = self.args.num_steps
         check_point, batch_size = self.args.check_point, self.args.batch_size
         save_dir, save_prefix = self.args.model_dir, self.args.algo
-        loss = 0.
+        loss = 0.0
 
         for bitx, batch in enumerate(train_batches):
             knowledge_variable = Variable(torch.from_numpy(np.array(batch['knowledge_qs'], dtype=np.int64)))
@@ -142,18 +155,36 @@ class Model(object):
                 self.optimizer.step()
                 self.writer.add_scalar('train/loss', loss.data[0], self.global_step)
 
-                loss = 0.
+                loss = 0.0
 
                 if evaluate and self.global_step % self.eval_freq == 0:
-                    if data.dev_set is not None:
-                        eval_batches = data.gen_mini_batches('dev', batch_size, shuffle=False)
-                        eval_loss = self.evaluate(eval_batches, data, isRank=False, result_dir=self.args.result_dir, t=-1,
-                                                  result_prefix='train_dev.predicted.{}.{}'.format(self.args.algo,
-                                                                                                   self.global_step))
-                        self.writer.add_scalar("dev/loss", eval_loss, self.global_step)
+                    if data.dev_set is not None or data.test_set is not None:
+                        dev_batches = data.gen_mini_batches('dev', batch_size, shuffle=False)
+                        dev_loss, dev_LL, dev_perplexity, dev_perplexity_at_rank = self.evaluate(dev_batches, data, result_dir=self.args.result_dir,
+                                                                                    result_prefix='train_dev.predicted.{}.{}'.format(self.args.algo,
+                                                                                                                                    self.global_step))
+                        test_batches = data.gen_mini_batches('test', batch_size, shuffle=False)
+                        test_loss, test_LL, test_perplexity, test_perplexity_at_rank = self.evaluate(test_batches, data, result_dir=self.args.result_dir,
+                                                                                    result_prefix='train_test.predicted.{}.{}'.format(self.args.algo,
+                                                                                                                                    self.global_step))
+                        self.writer.add_scalar("dev/loss", dev_loss, self.global_step)
+                        self.writer.add_scalar("dev/log likelihood", dev_LL, self.global_step)
+                        self.writer.add_scalar("dev/perplexity", dev_perplexity, self.global_step)
+                        self.writer.add_scalar("test/loss", test_loss, self.global_step)
+                        self.writer.add_scalar("test/log likelihood", test_LL, self.global_step)
+                        self.writer.add_scalar("test/perplexity", test_perplexity, self.global_step)
 
-                        if eval_loss < metric_save:
-                            metric_save = eval_loss
+                        label_batches = data.gen_mini_batches('label', batch_size, shuffle=False)
+                        trunc_levels = [1, 3, 5, 10]
+                        ndcgs_version1, ndcgs_version2 = self.ndcg(label_batches, data, result_dir=self.args.result_dir,
+                                                                    result_prefix='train.rank.{}.{}'.format(self.args.algo, self.global_step))
+                        for trunc_level in trunc_levels:
+                            ndcg_version1, ndcg_version2 = ndcgs_version1[trunc_level], ndcgs_version2[trunc_level]
+                            self.writer.add_scalar("ndcg_version1/{}".format(trunc_level), ndcg_version1, self.global_step)
+                            self.writer.add_scalar("ndcg_version2/{}".format(trunc_level), ndcg_version2, self.global_step)
+
+                        if dev_loss < metric_save:
+                            metric_save = dev_loss
                             patience = 0
                         else:
                             patience += 1
@@ -161,11 +192,11 @@ class Model(object):
                             self.adjust_learning_rate(self.args.lr_decay)
                             self.learning_rate *= self.args.lr_decay
                             self.writer.add_scalar('train/lr', self.learning_rate, self.global_step)
-                            metric_save = eval_loss
+                            metric_save = dev_loss
                             patience = 0
                             self.patience += 1
                     else:
-                        self.logger.warning('No dev set is loaded for evaluation in the dataset!')
+                        self.logger.warning('No dev/test set is loaded for evaluation in the dataset!')
                 if check_point > 0 and self.global_step % check_point == 0:
                     self.save_model(save_dir, save_prefix)
                 if self.global_step >= num_steps:
@@ -174,7 +205,7 @@ class Model(object):
         return max_metric_value, exit_tag, metric_save, patience
 
     def train(self, data):
-        max_metric_value, epoch, patience, metric_save = 0., 0, 0, 1e10
+        max_metric_value, epoch, patience, metric_save = 0.0, 0, 0, 1e10
         step_pbar = tqdm(total=self.args.num_steps)
         exit_tag = False
         self.writer.add_scalar('train/lr', self.learning_rate, self.global_step)
@@ -183,14 +214,86 @@ class Model(object):
             epoch += 1
             train_batches = data.gen_mini_batches('train', self.args.batch_size, shuffle=True)
             max_metric_value, exit_tag, metric_save, patience = self._train_epoch(train_batches, data, max_metric_value, metric_save,
-                                                                                  patience, step_pbar)
+                                                                                    patience, step_pbar)
+    
+    def ndcg(self, label_batches, data, result_dir=None, result_prefix=None, stop=-1):
+        trunc_levels = [1, 3, 5, 10]
+        ndcg_version1, ndcg_version2 = {}, {}
+        useless_session, cnt_version1, cnt_version2 = {}, {}, {}
+        for k in trunc_levels:
+            ndcg_version1[k] = 0.0
+            ndcg_version2[k] = 0.0
+            useless_session[k] = 0
+            cnt_version1[k] = 0
+            cnt_version2[k] = 0
+        with torch.no_grad():
+            for b_itx, batch in enumerate(label_batches):
+                if b_itx == stop:
+                    break
+                if b_itx % 5000 == 0:
+                    self.logger.info('Evaluation step {}.'.format(b_itx))
+                knowledge_variable = Variable(torch.from_numpy(np.array(batch['knowledge_qs'], dtype=np.int64)))
+                interaction_variable = Variable(torch.from_numpy(np.array(batch['interactions'], dtype=np.int64)))
+                document_variable = Variable(torch.from_numpy(np.array(batch['doc_infos'], dtype=np.int64)))
+                examination_context = Variable(torch.from_numpy(np.array(batch['exams'], dtype=np.int64)))
+                true_relevances = batch['relevances'][0]
+                if use_cuda:
+                    knowledge_variable, interaction_variable, document_variable, examination_context = \
+                        knowledge_variable.cuda(), interaction_variable.cuda(), document_variable.cuda(), \
+                        examination_context.cuda()
 
-    def evaluate(self, eval_batches, data, isRank=False, result_dir=None, result_prefix=None, t=-1):
+                self.model.eval()
+                relevances, exams, pred_clicks = self.model(knowledge_variable, interaction_variable, document_variable,
+                                                            examination_context, data)
+                relevances = relevances.data.cpu().numpy().reshape(-1).tolist()
+                pred_rels = {}
+                for idx, relevance in enumerate(relevances):
+                    pred_rels[idx] = relevance
+                
+                for k in trunc_levels:
+                    ideal_ranking_relevances = sorted(true_relevances, reverse=True)[:k]
+                    ranking = sorted([idx for idx in pred_rels], key = lambda idx : pred_rels[idx], reverse=True)
+                    ranking_relevances = [true_relevances[idx] for idx in ranking[:k]]
+                    dcg = self.dcg(ranking_relevances)
+                    idcg = self.dcg(ideal_ranking_relevances)
+                    if dcg > idcg:
+                        pprint.pprint(ranking_relevances)
+                        pprint.pprint(ideal_ranking_relevances)
+                        pprint.pprint(dcg)
+                        pprint.pprint(idcg)
+                        pprint.pprint(info_per_query)
+                        assert 0
+                    ndcg = dcg / idcg if idcg > 0 else 1.0
+                    if idcg == 0:
+                        useless_session[k] += 1
+                        cnt_version2[k] += 1
+                        ndcg_version2[k] += ndcg
+                    else:
+                        ndcg = dcg / idcg
+                        cnt_version1[k] += 1
+                        cnt_version2[k] += 1
+                        ndcg_version1[k] += ndcg
+                        ndcg_version2[k] += ndcg
+            for k in trunc_levels:
+                ndcg_version1[k] /= cnt_version1[k]
+                ndcg_version2[k] /= cnt_version2[k]
+        return ndcg_version1, ndcg_version2
+
+    def dcg(self, ranking_relevances):
+        """
+        Computes the DCG for a given ranking_relevances
+        """
+        return sum([(2 ** relevance - 1) / math.log(rank + 2, 2) for rank, relevance in enumerate(ranking_relevances)])
+
+    def evaluate(self, eval_batches, data, result_dir=None, result_prefix=None, stop=-1):
         eval_ouput = []
-        total_loss, total_num = 0., 0
+        total_loss, total_num = 0.0, 0
+        log_likelihood = 0.0
+        perplexity_num = 0
+        perplexity_at_rank = [0.0] * 10 # 10 docs per query
         with torch.no_grad():
             for b_itx, batch in enumerate(eval_batches):
-                if b_itx == t:
+                if b_itx == stop:
                     break
                 if b_itx % 5000 == 0:
                     self.logger.info('Evaluation step {}.'.format(b_itx))
@@ -209,11 +312,16 @@ class Model(object):
 
                 loss1, loss_list1 = self.compute_loss(pred_clicks, batch['clicks'])
                 loss2, loss_list2 = self.compute_loss_rel(relevances, batch['clicks'])
+                tmp_num, tmp_perplexity_at_rank = self.compute_perplexity(pred_clicks, batch['clicks'])
+                perplexity_num += tmp_num
+                perplexity_at_rank = [perplexity_at_rank[i] + tmp_perplexity_at_rank[i] for i in range(10)]
+                log_likelihood -= loss1
+
                 relevances = relevances.data.cpu().numpy()[0, :, 0].tolist()
                 exams = exams.data.cpu().numpy()[0, :, 0].tolist()
                 pred_clicks = pred_clicks.data.cpu().numpy()[0, :, 0].tolist()
                 loss1 = loss1.data.cpu().numpy().tolist()[0]
-                if loss2 != 0.:
+                if loss2 != 0.0:
                     loss2 = loss2.data.cpu().numpy().tolist()[0]
                 loss = loss1 + loss2 * self.reg_relevance
                 eval_ouput.append([0, batch['clicks'][0], relevances, exams, pred_clicks, loss])
@@ -245,16 +353,19 @@ class Model(object):
                 w31 = self.model.w31.data.cpu()
                 w32 = self.model.w32.data.cpu()
                 print('nonlinear:w11=%s\tw12=%s\tw21=%s\tw22=%s\tw31=%s\tw32=%s' % (w11, w12, w21, w22, w31, w32))
-            ave_span_loss = 1.0 * total_loss / total_num
-
-        return ave_span_loss
+                
+            avg_span_loss = 1.0 * total_loss / total_num
+            perplexity_at_rank = [2 ** (-x / perplexity_num) for x in perplexity_at_rank]
+            perplexity = sum(perplexity_at_rank) / len(perplexity_at_rank)
+            log_likelihood = log_likelihood / 10.0 / perplexity_num
+        return avg_span_loss, log_likelihood, perplexity, perplexity_at_rank
 
     def save_model(self, model_dir, model_prefix):
         torch.save(self.model.state_dict(), os.path.join(model_dir, model_prefix+'_{}.model'.format(self.global_step)))
         torch.save(self.optimizer.state_dict(), os.path.join(model_dir, model_prefix + '_{}.optimizer'.format(self.global_step)))
         self.logger.info('Model and optimizer saved in {}, with prefix {} and global step {}.'.format(model_dir,
-                                                                                                      model_prefix,
-                                                                                                      self.global_step))
+                                                                                                        model_prefix,
+                                                                                                        self.global_step))
 
     def load_model(self, model_dir, model_prefix, global_step):
         optimizer_path = os.path.join(model_dir, model_prefix + '_{}.optimizer'.format(global_step))
@@ -263,8 +374,8 @@ class Model(object):
         if os.path.isfile(optimizer_path):
             self.optimizer.load_state_dict(torch.load(optimizer_path))
             self.logger.info('Optimizer restored from {}, with prefix {} and global step {}.'.format(model_dir,
-                                                                                                     model_prefix,
-                                                                                                     global_step))
+                                                                                                        model_prefix,
+                                                                                                        global_step))
         model_path = os.path.join(model_dir, model_prefix + '_{}.model'.format(global_step))
         if not os.path.isfile(model_path):
             model_path = os.path.join(model_dir, model_prefix + '_best_{}.model'.format(global_step))

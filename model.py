@@ -228,7 +228,6 @@ class Model(object):
             cnt_version2[k] = 0
         with torch.no_grad():
             for b_itx, batch in enumerate(label_batches):
-                print(b_itx)
                 if b_itx == stop:
                     break
                 if b_itx % 5000 == 0:

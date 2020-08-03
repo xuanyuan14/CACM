@@ -44,7 +44,6 @@ class Dataset(object):
                         self.node_emb[int(data[0])] = [float(x) for x in data[1:]]
 
             # load qid_nid, uid_nid
-            self.uid_vid = load_dict(args.data_dir, 'uid_vid.dict')
             self.vtype_vid = load_dict(args.data_dir, 'vtype_vid.dict')
             self.qid_nid = load_dict(args.data_dir, 'qid_nid.dict')
             self.uid_nid = load_dict(args.data_dir, 'uid_nid.dict')
@@ -77,8 +76,6 @@ class Dataset(object):
         for dir in files:
             fn = open(dir, 'r')
             sess = fn.read().strip().split('\n\n')
-            if mode == 'label':
-                assert len(sess) == 2000
             for s in sess:
                 knowledge_qs, interactions, doc_infos, exams, clicks, relevances = [], [], [], [], [], []
                 lines = s.strip().split('\n')

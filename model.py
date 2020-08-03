@@ -174,9 +174,9 @@ class Model(object):
                         self.writer.add_scalar("test/log likelihood", test_LL, self.global_step)
                         self.writer.add_scalar("test/perplexity", test_perplexity, self.global_step)
 
-                        label_batches = dataset.gen_mini_batches('label', args.batch_size, shuffle=False)
+                        label_batches = data.gen_mini_batches('label', batch_size, shuffle=False)
                         trunc_levels = [1, 3, 5, 10]
-                        ndcgs_version1, ndcgs_version2 = model.ndcg(label_batches, data, result_dir=args.result_dir,
+                        ndcgs_version1, ndcgs_version2 = self.ndcg(label_batches, data, result_dir=self.args.result_dir,
                                                                     result_prefix='train.rank.{}.{}'.format(self.args.algo, self.global_step))
                         for trunc_level in trunc_levels:
                             ndcg_version1, ndcg_version2 = ndcgs_version1[trunc_level], ndcgs_version2[trunc_level]
@@ -291,8 +291,6 @@ class Model(object):
                 print('{}: {}'.format('useless_session[{}]'.format(k), useless_session[k]))
                 print('{}: {}'.format('cnt_version2[{}]'.format(k), cnt_version2[k]))'''
             for k in trunc_levels:
-                assert cnt_version1[k] + useless_session[k] == 2000
-                assert cnt_version2[k] == 2000
                 ndcg_version1[k] /= cnt_version1[k]
                 ndcg_version2[k] /= cnt_version2[k]
         return ndcg_version1, ndcg_version2

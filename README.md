@@ -1,11 +1,11 @@
-# A Pytorch Implementation of Context-Aware Click Model (CACM)
+## A Pytorch Implementation of Context-Aware Click Model (CACM)
 
-## Introduction
+### Introduction
 
 This codebase contains source-code of the Pytorch-based implementation of our WSDM2020 paper.
   - [WSDM 2020] [A Context-Aware Click Model for Web Search](https://dl.acm.org/doi/10.1145/3336191.3371819)
 
-## Requirements
+### Requirements
 
 * python 3.7
 * pytorch 1.4.0
@@ -14,7 +14,7 @@ This codebase contains source-code of the Pytorch-based implementation of our WS
 * [prettytable](https://pypi.org/project/PrettyTable/)
 
 
-## Available Dataset
+### Available Dataset
 
 We are delighted to share the public session dataset we used to run our experiments. This Chinese-centric TianGong-ST dataset is provided to support researches in a wide range of session-level Information Retrieval (IR) tasks. It consists of 147,155 refined Web search sessions, 40,596 unique queries, 297,597 Web pages, six kinds of weak relevance labels assessed by click models, and also a subset of 2,000 sessions with 5-level human relevance labels for documents of the last queries in them. In our experiments, the dataset is splitted into training, validating and testing set with a ratio of 8:1:1. To ensure proper evaluation, we filter a session in the validating and testing set if it contains queries which do not appear in the training set. We also include all the annotated sessions in the testing set to facilitate the evaluation of relevance estimation. Some specifics of the dataset can be found as follows:
 
@@ -39,7 +39,7 @@ This dataset is now available at [here](http://www.thuir.cn/tiangong-st/).
     - clicked: 0 or 1
 
 
-## Quick Start
+### Quick Start
 
 To do data pre-processing, run the following command:
 
@@ -72,7 +72,7 @@ python -u run.py --train --optim adam --eval_freq 5 --check_point 5 \
 **NOTE**: due to the difference of the session size, the batch_size can only be set to one. We will accumulate the gradient and update at every 32 iterations to simulate the logical batch_size of 32. Check out at line 151 in [model.py](model.py)
 
 
-## Citation
+### Citation
 
 If you find the resources in this repo useful, please cite our work.
 
@@ -86,7 +86,7 @@ If you find the resources in this repo useful, please cite our work.
 }
 ```
 
-## Acknowledgement
+### Acknowledgement
 
 Thanks to [Jianghao Lin](https://chiangel.github.io/) for:
 

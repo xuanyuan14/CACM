@@ -76,7 +76,7 @@ python -u run.py --train --optim adam --eval_freq 5 --check_point 5 \
 
 If you find the resources in this repo useful, please cite our work.
 
-```
+```bibtex
 @inproceedings{chen2020Context,
   title={A Context-Aware Click Model for Web Search},
   author={Chen, Jia and Mao, Jiaxin and Liu, Yiqun and Zhang, Min and Ma, Shaoping},

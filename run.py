@@ -59,11 +59,11 @@ def parse_args():
                                 help='max number of docs in a session')
     model_settings.add_argument('--max_sess_length', type=int, default=10,
                                 help='max session length')
-    model_settings.add_argument('--use_knowledge', type=bool, default=False,
+    model_settings.add_argument('--use_knowledge', action="store_true",
                                 help='whether use knowledge embedding')
-    model_settings.add_argument('--use_knowledge_attention', type=bool, default=False,
+    model_settings.add_argument('--use_knowledge_attention', action="store_true",
                                 help='whether use knowledge attention')
-    model_settings.add_argument('--use_state_attention', type=bool, default=False,
+    model_settings.add_argument('--use_state_attention', action="store_true",
                                 help='whether use state attention')
     model_settings.add_argument('--combine', default='mul',
                                 help='type of combining the relevance and the examination to predict the click')

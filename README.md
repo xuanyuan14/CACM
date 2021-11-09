@@ -57,7 +57,7 @@ To train CACM model on a small data sample, run the following command:
 python -u run.py --train --optim adam --eval_freq 5 --check_point 5 \
 --learning_rate 0.001 --weight_decay 1e-5 --dropout_rate 0.5 --batch_size 1 \
 --num_steps 200000 --embed_size 64 --hidden_size 256 --patience 5 \
---use_knowledge True --use_state_attention True --use_knowledge_attention True \
+--use_knowledge --use_state_attention --use_knowledge_attention \
 --train_dirs ./data/train_per_session.txt \
 --dev_dirs ./data/dev_per_session.txt \
 --test_dirs ./data/test_per_session.txt \

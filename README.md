@@ -43,7 +43,7 @@ This dataset is now available at [here](http://www.thuir.cn/tiangong-st/).
 
 To do data pre-processing, run the following command:
 
-```c
+```shell
 python TianGong-ST-CACM.py \
 --clean_xml --dict_list --txt --node2vec --human_label_txt_for_CACM \
 --dataset sogousessiontrack2020.xml \
@@ -53,7 +53,7 @@ python TianGong-ST-CACM.py \
 
 To train CACM model on a small data sample, run the following command:
 
-```c
+```shell
 python -u run.py --train --optim adam --eval_freq 5 --check_point 5 \
 --learning_rate 0.001 --weight_decay 1e-5 --dropout_rate 0.5 --batch_size 1 \
 --num_steps 200000 --embed_size 64 --hidden_size 256 --patience 5 \

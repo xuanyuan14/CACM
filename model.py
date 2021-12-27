@@ -96,9 +96,9 @@ class Model(object):
         total_num = len(pred_scores[0]) // 10
         for position_idx, score in enumerate(target_scores[0]):
             if score == 0:
-                perplexity_at_rank[position_idx % 10] += torch.log2(1. - pred_scores[0][position_idx % 10].view(1) + MINF)
+                perplexity_at_rank[position_idx % 10] += torch.log2(1. - pred_scores[0][position_idx].view(1) + MINF)
             else:
-                perplexity_at_rank[position_idx % 10] += torch.log2(pred_scores[0][position_idx % 10].view(1) + MINF)
+                perplexity_at_rank[position_idx % 10] += torch.log2(pred_scores[0][position_idx].view(1) + MINF)
         return total_num, perplexity_at_rank
 
     def create_train_op(self):
